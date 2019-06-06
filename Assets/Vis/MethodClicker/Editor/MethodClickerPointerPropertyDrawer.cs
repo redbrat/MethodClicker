@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
@@ -18,95 +19,118 @@ namespace Vis.MethodClicker.Editor
             return base.CreatePropertyGUI(property);
         }
 
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            if (GUI.Button(position, property.name))
-            {
-                //Debug.Log($"attribute = {attribute}");
-                //Debug.Log($"fieldInfo = {fieldInfo}");
-                //Debug.Log($"fieldInfo.FieldType = {fieldInfo.FieldType}");
-                //Debug.Log($"fieldInfo.ReflectedType = {fieldInfo.ReflectedType}");
-                //Debug.Log($"fieldInfo attrs count = {fieldInfo.CustomAttributes.Count()}");
-                Debug.Log($"fieldInfo.DeclaringType = {fieldInfo.DeclaringType}");
-                var parent = property.serializedObject.targetObject;
-                if (fieldInfo.CustomAttributes.Any() && fieldInfo.CustomAttributes.Count(customAttributeData => typeof(MethodClickerAttribute).IsAssignableFrom(customAttributeData.AttributeType)) > 0)
-                    invokeMethod(property.name, fieldInfo.GetValue(parent), parent, fieldInfo.GetCustomAttribute<MethodClickerAttribute>());
-                else
-                    invokeMethod(property.name, fieldInfo.GetValue(parent), parent);
-            }
+            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as MethodClickerPointer;
+            var result = base.GetPropertyHeight(property, label);
+
+            if (methodClickerPointer.ButtonHeight != default)
+                result = methodClickerPointer.ButtonHeight;
+            if (methodClickerPointer.ButtonY != default)
+                result += methodClickerPointer.ButtonY;
+            return result;
         }
 
-        private void invokeMethod(string fieldName, object pointerObject, Object parentObject, MethodClickerAttribute attributeObject = null)
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as MethodClickerPointer;
+            
+            var formattedStyle = default(GUIStyle);
+
+            var originalBackgroundColor = GUI.backgroundColor;
+            var originalContentColor = GUI.contentColor;
+
+            if (methodClickerPointer.Style != null)
+                formattedStyle = methodClickerPointer.Style;
+            else
+            {
+                formattedStyle = new GUIStyle(GUI.skin.button);
+
+                formattedStyle.richText = methodClickerPointer.RichText;
+                formattedStyle.fontSize = methodClickerPointer.ButtonTextSize;
+
+                formattedStyle.normal.textColor = methodClickerPointer.ContentColor;
+                formattedStyle.hover.textColor = methodClickerPointer.ContentColor;
+                formattedStyle.active.textColor = methodClickerPointer.ContentColor;
+                formattedStyle.focused.textColor = methodClickerPointer.ContentColor;
+
+                GUI.contentColor = methodClickerPointer.ContentColor;
+                GUI.backgroundColor = methodClickerPointer.BackgroundColor;
+            }
+
+            var formattedName = string.IsNullOrEmpty(methodClickerPointer.ButtonText) ? formatName(property.name) : methodClickerPointer.ButtonText;
+
+            var formattedPosition = formatPosition(methodClickerPointer, position);
+
+            if (GUI.Button(formattedPosition, formattedName, formattedStyle))
+            {
+                var parent = property.serializedObject.targetObject;
+                if (fieldInfo.CustomAttributes.Any() && fieldInfo.CustomAttributes.Count(customAttributeData => typeof(MethodClickerAttribute).IsAssignableFrom(customAttributeData.AttributeType)) > 0)
+                    invokeMethod(property.name, parent, fieldInfo.GetCustomAttribute<MethodClickerAttribute>());
+                else
+                    invokeMethod(property.name, parent);
+            }
+
+            GUI.contentColor = originalContentColor;
+            GUI.backgroundColor = originalBackgroundColor;
+        }
+
+        private Rect formatPosition(MethodClickerPointer methodClickerPointer, Rect position)
+        {
+            var result = position;
+
+            if (methodClickerPointer.ButtonX != default)
+                result.x = methodClickerPointer.ButtonX;
+            if (methodClickerPointer.ButtonY != default)
+                result.y += methodClickerPointer.ButtonY;
+            if (methodClickerPointer.ButtonHeight != default)
+                result.height = methodClickerPointer.ButtonHeight;
+            if (methodClickerPointer.ButtonWidth != default)
+                result.width = methodClickerPointer.ButtonWidth;
+
+            return result;
+        }
+
+        private string formatName(string name)
+        {
+            var sb = new StringBuilder();
+
+            var lastChar = default(char?);
+            for (int i = 0; i < name.Length; i++)
+            {
+                var currentChar = name[i];
+                if (lastChar == null)
+                    sb.Append(currentChar);
+                else
+                {
+                    if (currentChar == '_')
+                        sb.Append(' ');
+                    else
+                    {
+                        if (char.IsLower(lastChar.Value) && char.IsUpper(currentChar))
+                            sb.Append(' ');
+
+                        sb.Append(currentChar);
+                    }
+                }
+                lastChar = currentChar;
+            }
+
+            return sb.ToString();
+        }
+
+        private void invokeMethod(string fieldName, Object parentObject, MethodClickerAttribute attributeObject = null)
         {
             var methodName = attributeObject?.MethodName;
             if (string.IsNullOrEmpty(methodName))
                 methodName = findNextMethod(fieldName, fieldInfo.DeclaringType);
             if (string.IsNullOrEmpty(methodName))
                 return;
-            
-            //    //var member = findType(parent.GetType(), attribute.MethodName);
-
-            //    //var members = parent.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            //    //var reachedNext = false;
-            //    //for (int i = 0; i < members.Length; i++)
-            //    //{
-            //    //    var currentMember = members[i];
-            //    //    if (!reachedNext)
-            //    //    {
-            //    //        if (currentMember is FieldInfo && (currentMember as FieldInfo).GetValue(parent) == pointer)
-            //    //            reachedNext = true;
-            //    //        else if (currentMember is PropertyInfo && (currentMember as PropertyInfo).GetValue(parent) == pointer)
-            //    //            reachedNext = true;
-            //    //    }
-            //    //    else if (currentMember is MethodInfo)
-            //    //    {
-            //    //        var method = currentMember as MethodInfo;
-            //    //        tryInvoke(parent, method);
-            //    //        return;
-            //    //    }
-            //    //}
-            //}
-            //else
-            //{
-                var method = findMethod(parentObject.GetType(), methodName);
-                if (method == null)
-                    Debug.LogError($"[MethodClicker]: Can't find method/function with name \"{methodName}\"!");
-                else
-                    tryInvoke(parentObject, method);
-
-                //var members = parent.GetType().GetMembers(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.FlattenHierarchy | BindingFlags.);
-                //for (int i = 0; i < members.Length; i++)
-                //{
-                //    Debug.Log($"Member {i + 1}: {members[i].Name}");
-                //}
-                //Debug.Log($"attribute method = {attribute.MethodName}");
-                //var method = parent.GetType().GetMethod(attribute.MethodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.FlattenHierarchy);
-                //if (method == null)
-                //{
-                //    Debug.LogError($"[MethodClicker]: Can't find method/function with name \"{attribute.MethodName}\"!");
-                //    return;
-                //}
-                //tryInvoke(parent, method);
-                return;
-            //}
-
-            //var editors = Resources.FindObjectsOfTypeAll<UnityEditor.Editor>();
-            //for (int i = 0; i < editors.Length; i++)
-            //{
-            //    Debug.Log($"{i+1}: {editors[i].GetType().FullName}. target = {(editors[i] as UnityEditor.Editor).target.GetType().FullName}");
-            //}
-
-            //var inspectorWindow = Resources.FindObjectsOfTypeAll<UnityEditor.Editor>().Where(w => w.GetType().FullName == "UnityEditor.InspectorWindow").First();
-
-            //enumerateMembers(inspectorWindow.GetType(), 0);
-            //var inspectorPath = AssetDatabase.GetAssetPath(inspectorWindow);
-            //Debug.Log($"inspectorPath = {inspectorPath}");
-            //var assets = AssetDatabase.LoadAllAssetsAtPath(inspectorPath);
-            //Debug.Log($"assets.Length = {assets.Length}");
-            //for (int i = 0; i < assets.Length; i++)
-            //{
-            //    Debug.Log($"{i + 1}: {assets[i].name} ({assets[i].GetType().FullName})");
-            //}
+            var method = findMethod(parentObject.GetType(), methodName);
+            if (method == null)
+                Debug.LogError($"[MethodClicker]: Can't find method/function with name \"{methodName}\"!");
+            else
+                tryInvoke(parentObject, method);
         }
 
         private string findNextMethod(string fieldName, Type declaringType)
@@ -128,17 +152,17 @@ namespace Vis.MethodClicker.Editor
             var script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetsWithSimilarNames[0]);
 
             var pointerRegex = new Regex($@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*({nameof(MethodClickerPointer)})\s*({fieldName})\s*");
-            var index = pointerRegex.Match(script.text).Index;
-            if (index < 0)
+            var match = pointerRegex.Match(script.text);
+            if (!match.Success)
             {
                 Debug.LogError($"[MethodClicker] Cannot locate pointer with name {fieldName} within a class {className}!");
                 return null;
             }
 
-            var afterGoing = script.text.Substring(index);
+            var afterGoing = script.text.Substring(match.Index);
 
             var voidMethodRegex = new Regex($@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*\b(void)\b\s+([\w\d_]+)\s*\((.*)\)\s*");
-            var match = voidMethodRegex.Match(afterGoing);
+            match = voidMethodRegex.Match(afterGoing);
             if (!match.Success)
             {
                 Debug.LogError($"[MethodClicker] Cannot locate parameterless and returning void method or function after pointer with name {fieldName} within a class {className}!");
@@ -146,14 +170,6 @@ namespace Vis.MethodClicker.Editor
             }
 
             var methodNameGroup = match.Groups[3];
-            Debug.Log($"Method that goes right after pointer is void {methodNameGroup}()");
-
-
-
-            Debug.Log($"index = {index}");
-            //Debug.Log($"halves.length = {halves.Length}");
-            Debug.Log($"text = {script.text}");
-
             return methodNameGroup.Value;
         }
 
@@ -182,21 +198,6 @@ namespace Vis.MethodClicker.Editor
             }
 
             method.Invoke(parent, null);
-        }
-
-        private void enumerateMembers(Type type, int indentLevel)
-        {
-            if (indentLevel > 7)
-                return;
-            var members = type.GetMembers(BindingFlags.NonPublic | BindingFlags.Public);
-            var indent = "";
-            for (int i = 0; i < indentLevel; i++)
-                indent += "    ";
-            for (int i = 0; i < members.Length; i++)
-            {
-                Debug.Log($"{indent}member {i + 1}: {members[i].Name} ({members[i].GetType().FullName})");
-                enumerateMembers(members[i].GetType(), indentLevel + 1);
-            }
         }
     }
 }
