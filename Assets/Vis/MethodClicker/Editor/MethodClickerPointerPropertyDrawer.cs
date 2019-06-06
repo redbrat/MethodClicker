@@ -48,6 +48,7 @@ namespace Vis.MethodClicker.Editor
 
                 formattedStyle.richText = methodClickerPointer.RichText;
                 formattedStyle.fontSize = methodClickerPointer.ButtonTextSize;
+                formattedStyle.fontStyle = methodClickerPointer.FontStyle;
 
                 formattedStyle.normal.textColor = methodClickerPointer.ContentColor;
                 formattedStyle.hover.textColor = methodClickerPointer.ContentColor;

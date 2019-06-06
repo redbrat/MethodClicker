@@ -23,6 +23,9 @@ namespace Vis.MethodClicker
         public Color BackgroundColor = Color.white;
 
         [NonSerialized]
+        public FontStyle FontStyle = FontStyle.Normal;
+
+        [NonSerialized]
         public float ButtonX;
         [NonSerialized]
         public float ButtonY;
