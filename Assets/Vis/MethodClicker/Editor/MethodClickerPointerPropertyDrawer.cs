@@ -34,7 +34,7 @@ namespace Vis.MethodClicker.Editor
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as MethodClickerPointer;
-            
+
             var formattedStyle = default(GUIStyle);
 
             var originalBackgroundColor = GUI.backgroundColor;

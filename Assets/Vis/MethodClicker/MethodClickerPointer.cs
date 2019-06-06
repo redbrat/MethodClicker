@@ -30,7 +30,7 @@ namespace Vis.MethodClicker
         [NonSerialized]
         public float ButtonY;
         [NonSerialized]
-        public float ButtonHeight;
+        public float ButtonHeight = 22;
         [NonSerialized]
         public float ButtonWidth;
     }
