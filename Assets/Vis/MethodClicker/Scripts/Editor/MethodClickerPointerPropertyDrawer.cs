@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
-//using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Vis.MethodClicker.Editor
@@ -14,11 +13,6 @@ namespace Vis.MethodClicker.Editor
     [CustomPropertyDrawer(typeof(McPtr))]
     public class MethodClickerPointerPropertyDrawer : PropertyDrawer
     {
-        //public override VisualElement CreatePropertyGUI(SerializedProperty property)
-        //{
-        //    return base.CreatePropertyGUI(property);
-        //}
-
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as McPtr;
@@ -76,7 +70,6 @@ namespace Vis.MethodClicker.Editor
                 var parent = property.serializedObject.targetObject;
                 var attrs = fieldInfo.GetCustomAttributes(typeof(MethodClickerAttribute), false);
                 if (attrs.Length > 0)
-                //if (fieldInfo.CustomAttributes.Any() && fieldInfo.CustomAttributes.Count(customAttributeData => typeof(MethodClickerAttribute).IsAssignableFrom(customAttributeData.AttributeType)) > 0)
                     invokeMethod(property.name, parent, attrs[0] as MethodClickerAttribute);
                 else
                     invokeMethod(property.name, parent);
