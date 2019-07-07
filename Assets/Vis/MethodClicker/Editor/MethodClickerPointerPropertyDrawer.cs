@@ -6,34 +6,42 @@ using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
+//using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Vis.MethodClicker.Editor
 {
-    [CustomPropertyDrawer(typeof(MethodClickerPointer))]
+    [CustomPropertyDrawer(typeof(McPtr))]
     public class MethodClickerPointerPropertyDrawer : PropertyDrawer
     {
-        public override VisualElement CreatePropertyGUI(SerializedProperty property)
-        {
-            return base.CreatePropertyGUI(property);
-        }
+        //public override VisualElement CreatePropertyGUI(SerializedProperty property)
+        //{
+        //    return base.CreatePropertyGUI(property);
+        //}
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as MethodClickerPointer;
+            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as McPtr;
             var result = base.GetPropertyHeight(property, label);
 
-            if (methodClickerPointer.ButtonHeight != default)
+            if (methodClickerPointer.ButtonHeight != default(float))
                 result = methodClickerPointer.ButtonHeight;
-            if (methodClickerPointer.ButtonY != default)
+            if (methodClickerPointer.ButtonY != default(float))
                 result += methodClickerPointer.ButtonY;
+            if (methodClickerPointer.PaddingTop != default(float))
+                result += methodClickerPointer.PaddingTop;
+            if (methodClickerPointer.PaddingBottom != default(float))
+                result += methodClickerPointer.PaddingBottom;
+
+            if (methodClickerPointer.ArbitraryGetPropertyHeightOverride != null)
+                result = methodClickerPointer.ArbitraryGetPropertyHeightOverride.Invoke(result);
+
             return result;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as MethodClickerPointer;
+            var methodClickerPointer = fieldInfo.GetValue(property.serializedObject.targetObject) as McPtr;
 
             var formattedStyle = default(GUIStyle);
 
@@ -66,27 +74,42 @@ namespace Vis.MethodClicker.Editor
             if (GUI.Button(formattedPosition, formattedName, formattedStyle))
             {
                 var parent = property.serializedObject.targetObject;
-                if (fieldInfo.CustomAttributes.Any() && fieldInfo.CustomAttributes.Count(customAttributeData => typeof(MethodClickerAttribute).IsAssignableFrom(customAttributeData.AttributeType)) > 0)
-                    invokeMethod(property.name, parent, fieldInfo.GetCustomAttribute<MethodClickerAttribute>());
+                var attrs = fieldInfo.GetCustomAttributes(typeof(MethodClickerAttribute), false);
+                if (attrs.Length > 0)
+                //if (fieldInfo.CustomAttributes.Any() && fieldInfo.CustomAttributes.Count(customAttributeData => typeof(MethodClickerAttribute).IsAssignableFrom(customAttributeData.AttributeType)) > 0)
+                    invokeMethod(property.name, parent, attrs[0] as MethodClickerAttribute);
                 else
                     invokeMethod(property.name, parent);
             }
 
             GUI.contentColor = originalContentColor;
             GUI.backgroundColor = originalBackgroundColor;
+
+            if (methodClickerPointer.ArbitraryGuiCode != null)
+            {
+                var arbitraryCodePosition = position;
+                arbitraryCodePosition.y += methodClickerPointer.ButtonHeight;
+                arbitraryCodePosition.height -= methodClickerPointer.ButtonHeight;
+
+                methodClickerPointer.ArbitraryGuiCode.Invoke(arbitraryCodePosition, property);
+            }
         }
 
-        private Rect formatPosition(MethodClickerPointer methodClickerPointer, Rect position)
+        private Rect formatPosition(McPtr methodClickerPointer, Rect position)
         {
             var result = position;
 
-            if (methodClickerPointer.ButtonX != default)
+            if (methodClickerPointer.ButtonX != default(float))
                 result.x = methodClickerPointer.ButtonX;
-            if (methodClickerPointer.ButtonY != default)
+            if (methodClickerPointer.PaddingLeft != default(float))
+                result.x = methodClickerPointer.PaddingLeft;
+            if (methodClickerPointer.ButtonY != default(float))
                 result.y += methodClickerPointer.ButtonY;
-            if (methodClickerPointer.ButtonHeight != default)
+            if (methodClickerPointer.PaddingTop != default(float))
+                result.y += methodClickerPointer.PaddingTop;
+            if (methodClickerPointer.ButtonHeight != default(float))
                 result.height = methodClickerPointer.ButtonHeight;
-            if (methodClickerPointer.ButtonWidth != default)
+            if (methodClickerPointer.ButtonWidth != default(float))
                 result.width = methodClickerPointer.ButtonWidth;
 
             return result;
@@ -100,8 +123,11 @@ namespace Vis.MethodClicker.Editor
             for (int i = 0; i < name.Length; i++)
             {
                 var currentChar = name[i];
+                lastChar = sb.Length == 0 ? null : (char?)sb[sb.Length - 1];
+                if (currentChar == '_' && lastChar == null)
+                    continue;
                 if (lastChar == null)
-                    sb.Append(currentChar);
+                    sb.Append(currentChar.ToString().ToUpper());
                 else
                 {
                     if (currentChar == '_')
@@ -114,7 +140,6 @@ namespace Vis.MethodClicker.Editor
                         sb.Append(currentChar);
                     }
                 }
-                lastChar = currentChar;
             }
 
             return sb.ToString();
@@ -122,14 +147,14 @@ namespace Vis.MethodClicker.Editor
 
         private void invokeMethod(string fieldName, Object parentObject, MethodClickerAttribute attributeObject = null)
         {
-            var methodName = attributeObject?.MethodName;
+            var methodName = attributeObject == null ? null : attributeObject.MethodName;
             if (string.IsNullOrEmpty(methodName))
                 methodName = findNextMethod(fieldName, fieldInfo.DeclaringType);
             if (string.IsNullOrEmpty(methodName))
                 return;
             var method = findMethod(parentObject.GetType(), methodName);
             if (method == null)
-                Debug.LogError($"[MethodClicker]: Can't find method/function with name \"{methodName}\"!");
+                Debug.LogError(string.Format("[MethodClicker]: Can't find method/function with name \"{0}\"!", methodName));
             else
                 tryInvoke(parentObject, method);
         }
@@ -146,27 +171,27 @@ namespace Vis.MethodClicker.Editor
 
             if (assetsWithSimilarNames.Length == 0)
             {
-                Debug.LogError($"[MethodClicker] Cannot locate script with class {className} declared! Try to put your classes to scripts with corresponding name.");
+                Debug.LogError(string.Format("[MethodClicker] Cannot locate script with class {0} declared! Try to put your classes to scripts with corresponding name.", className));
                 return null;
             }
 
             var script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetsWithSimilarNames[0]);
 
-            var pointerRegex = new Regex($@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*({nameof(MethodClickerPointer)})\s*({fieldName})\s*");
+            var pointerRegex = new Regex(string.Format(@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*({0})\s*({1})\s*", "McPtr", fieldName));
             var match = pointerRegex.Match(script.text);
             if (!match.Success)
             {
-                Debug.LogError($"[MethodClicker] Cannot locate pointer with name {fieldName} within a class {className}!");
+                Debug.LogError(string.Format("[MethodClicker] Cannot locate pointer with name {0} within a class {1}!", fieldName, className));
                 return null;
             }
 
             var afterGoing = script.text.Substring(match.Index);
 
-            var voidMethodRegex = new Regex($@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*\b(void)\b\s+([\w\d_]+)\s*\((.*)\)\s*");
+            var voidMethodRegex = new Regex(@"(\bpublic\b|\bprivate\b|\bprotected\b|binternal\b)?\s*\b(void)\b\s+([\w\d_]+)\s*\((.*)\)\s*");
             match = voidMethodRegex.Match(afterGoing);
             if (!match.Success)
             {
-                Debug.LogError($"[MethodClicker] Cannot locate parameterless and returning void method or function after pointer with name {fieldName} within a class {className}!");
+                Debug.LogError(string.Format("[MethodClicker] Cannot locate parameterless and returning void method or function after pointer with name {0} within a class {1}!", fieldName, className));
                 return null;
             }
 
@@ -189,12 +214,12 @@ namespace Vis.MethodClicker.Editor
         {
             if (method.GetParameters().Length > 0)
             {
-                Debug.LogError($"[MethodClicker]: Target method/function must have no parameters!");
+                Debug.LogError("[MethodClicker]: Target method/function must have no parameters!");
                 return;
             }
             if (method.ReturnType != typeof(void))
             {
-                Debug.LogError($"[MethodClicker]: Target method/function must return void!");
+                Debug.LogError("[MethodClicker]: Target method/function must return void!");
                 return;
             }
 

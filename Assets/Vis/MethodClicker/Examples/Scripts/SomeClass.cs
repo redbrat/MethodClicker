@@ -9,16 +9,17 @@ namespace Vis.MethodClicker.Examples
         public long SomeTime = 15432148846435;
         public Texture SomeTexture;
 
-        public MethodClickerPointer TestClicker = new MethodClickerPointer()
+        public McPtr TestClicker = new McPtr()
         {
             ButtonText = "<b>Hello</b> <i>World</i> ©",
-            BackgroundColor = Color.cyan,
+            BackgroundColor = Color.cyan * 0.3f,
             ContentColor = Color.white,
             ButtonX = 60,
             ButtonY = 30,
             ButtonHeight = 60,
             ButtonWidth = 220,
-            ButtonTextSize = 22
+            ButtonTextSize = 22,
+            PaddingBottom = 14
         };
         void Test1()
         {
@@ -26,15 +27,15 @@ namespace Vis.MethodClicker.Examples
         }
 
         [SerializeField]
-        private MethodClickerPointer _test2; //If a pointer is private, make sure it's marked with SerializeField attribute!
+        private McPtr _test2; //If a pointer is private, make sure it's marked with SerializeField attribute!
         void Test2()
         {
             Debug.Log("Test2");
         }
 
-        public MethodClickerPointer Test___3; //Invokes the nearest next method - Test3 method
+        public McPtr Test___3; //Invokes the nearest next method - Test3 method
         [MethodClicker("Test4")]
-        public MethodClickerPointer Test___4; //Invokes Test4 method as explicitly asked in attribute
+        public McPtr Test___4; //Invokes Test4 method as explicitly asked in attribute
         void Test3()
         {
             Debug.Log("Test3");

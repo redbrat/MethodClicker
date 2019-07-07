@@ -2,7 +2,6 @@
 
 namespace Vis.MethodClicker.Examples
 {
-    [CreateAssetMenu(fileName = "test", menuName = "test/test", order = 0)]
     public class SomeScriptableObject : ScriptableObject
     {
         public string Text1 = "This...";
@@ -11,11 +10,16 @@ namespace Vis.MethodClicker.Examples
         public string Text4 = "very...";
         public string Text5 = "scriptable!";
 
+#pragma warning disable
         [SerializeField]
-        private MethodClickerPointer By_the_way_you_can_press_this_button = new MethodClickerPointer() { ButtonHeight = 20 };
+        private McPtr By_the_way_you_can_press_this_button = new McPtr() { ButtonHeight = 20 };
+#pragma warning enable
 
         public string Text6 = "The End.";
 
-        private void SomethingScripable() => Debug.Log("It's working.");
+        private void SomethingScripable()
+        {
+            Debug.Log("It's working.");
+        }
     }
 }
