@@ -5,9 +5,9 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// It's a pointer for editor to know wich function to invoke when
+/// It's a pointer for editor to know which function to invoke when
 /// user clicks on a button defined by that pointer. By default the
-/// next void() function is invoked. That behaviour can be overrriden 
+/// next void() function is invoked. That behaviour can be overridden 
 /// by adding MethodClicker attribute.
 /// </summary>
 [Serializable]
@@ -25,9 +25,9 @@ public class McPtr
     public GUIStyle Style;
 
     [NonSerialized]
-    public Color ContentColor = Color.black;
+    public Color ContentColor = Color.white;
     [NonSerialized]
-    public Color BackgroundColor = Color.white;
+    public Color BackgroundColor = Color.black;
 
     [NonSerialized]
     public FontStyle FontStyle = FontStyle.Normal;
@@ -53,6 +53,7 @@ public class McPtr
     public object ArbitraryData;
 #if UNITY_EDITOR
     public Action<Rect, SerializedProperty> ArbitraryGuiCode;
+    public Func<Rect, SerializedProperty, float, object, object> ArbitraryGuiDataChangingCode;
 #endif
     public Func<float, float> ArbitraryGetPropertyHeightOverride;
 }
